@@ -14,8 +14,9 @@ public:
 
     static LogSystem* Get() { return sInstance; }
     static void StartUp();
+    static void ShutDown();
     
-    ~LogSystem();
+    ~LogSystem() = default;
     
     void DebugPrint(const std::string &file, const int line, const std::string &message, ...);
 

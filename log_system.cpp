@@ -10,18 +10,8 @@
 LogSystem* LogSystem::sInstance = nullptr;
 
 const std::string LogSystem::sLogFileDir    = "Log/";
-const size_t LogSystem::sBytesToBuffer      = 0;
+const size_t LogSystem::sBytesToBuffer      = 4096;
 const size_t LogSystem::sMaxMessageChars    = 1023;
-
-
-LogSystem::~LogSystem() {
-
-    if(sInstance != nullptr)
-    {
-        delete sInstance;
-        sInstance = nullptr;
-    }
-}
 
 
 void LogSystem::StartUp() {
@@ -36,6 +26,25 @@ void LogSystem::StartUp() {
     sInstance->mLogFileName = std::string(buffer, buffer + std::strftime(buffer, sizeof(buffer),"%F_%T", std::gmtime(&now))) + ".log";
 
     std::filesystem::create_directory(sLogFileDir);
+}
+
+
+void LogSystem::ShutDown() {
+
+    if(sInstance == nullptr) 
+    {
+        return;
+    }
+
+    sInstance->mLogFileStream.flush();
+
+    std::ofstream file(sLogFileDir + sInstance->mLogFileName, std::ios_base::app);
+    file << sInstance->mLogFileStream.str() << '\n';
+    file.close();
+
+    sInstance->mLogFileStream.str("");
+    sInstance->mLogFileStream.clear();
+    sInstance->mLogFileStream.seekp(0);
 }
 
 
