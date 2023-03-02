@@ -7,6 +7,8 @@
 #include <fstream>
 
 
+/*    LOG SYSTEM    */
+
 LogSystem* LogSystem::sInstance = nullptr;
 
 const std::string LogSystem::sLogFileDir    = "Log/";
@@ -48,22 +50,19 @@ void LogSystem::ShutDown() {
 }
 
 
-void LogSystem::DebugPrint(const std::string &file, const int line, const std::string &message, ...) {
+void LogSystem::DebugPrint(const std::string &file, const int line, const std::string &message, va_list messageArgs) {
 
     assert(sInstance != nullptr);
 
     static char buffer[sMaxMessageChars];
 
     std::ostringstream stream;
-    stream << file << " [" << line << "] : " << message;
-
-    va_list messageArgs;
-    va_start(messageArgs, &message);
+    stream << file << " [" << line << "] : " << message << '\n';
 
     int messageLength = vsnprintf(buffer, sMaxMessageChars, stream.str().c_str(), messageArgs);
     buffer[messageLength] = '\0';
 
-    WriteBufferToFile(mLogFileName, mLogFileStream, buffer);
+    WriteBufferToFile(sInstance->mLogFileName, sInstance->mLogFileStream, buffer);
 }
 
 
@@ -83,4 +82,22 @@ void LogSystem::WriteBufferToFile(const std::string &fileName, std::ostringstrea
         stream.clear();
         stream.seekp(0);
     }
+}
+
+
+/*    LOG    */
+
+void Log::operator() (const std::string &message) {
+
+    va_list noArgs;
+    LogSystem::DebugPrint(file, line, message, noArgs);
+}
+
+
+void Log::operator() (const char *message, ...) {
+
+    va_list messageArgs;
+    va_start(messageArgs, message);
+
+    LogSystem::DebugPrint(file, line, message, messageArgs);
 }
