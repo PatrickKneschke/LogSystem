@@ -15,6 +15,8 @@ const std::string LogSystem::sLogFileDir    = "Log/";
 const size_t LogSystem::sBytesToBuffer      = 4096;
 const size_t LogSystem::sMaxMessageChars    = 1023;
 
+ const std::bitset<static_cast<int>(Verbosity::All) - 1> LogSystem::sVerbosityMask = static_cast<int>(Verbosity::Error) + static_cast<int>(Verbosity::Warning);
+
 
 void LogSystem::StartUp() {
 
@@ -50,19 +52,25 @@ void LogSystem::ShutDown() {
 }
 
 
-void LogSystem::DebugPrint(const std::string &file, const int line, const std::string &message, va_list messageArgs) {
+void LogSystem::DebugPrint(const std::string &file, const int line, const Verbosity verbosity, const std::string &message, va_list messageArgs) {
 
     assert(sInstance != nullptr);
 
     static char buffer[sMaxMessageChars];
 
     std::ostringstream stream;
-    stream << file << " [" << line << "] : " << message << '\n';
+    stream << file << " [" << line << "] , " << ToString(verbosity) << "\t : " << message << '\n';
 
     int messageLength = vsnprintf(buffer, sMaxMessageChars, stream.str().c_str(), messageArgs);
     buffer[messageLength] = '\0';
 
     WriteBufferToFile(sInstance->mLogFileName, sInstance->mLogFileStream, buffer);
+
+    // also print message to default output if according to verbosity mask
+    if(CheckVerbosity(verbosity)) {
+
+        std::cout << buffer <<'\n';
+    }
 }
 
 
@@ -85,12 +93,19 @@ void LogSystem::WriteBufferToFile(const std::string &fileName, std::ostringstrea
 }
 
 
+ bool LogSystem::CheckVerbosity(Verbosity verbosity) {
+    
+    return sVerbosityMask.test(static_cast<int>(verbosity) - 1);
+ }
+
+
 /*    LOG    */
+
 
 void Log::operator() (const std::string &message) {
 
     va_list noArgs;
-    LogSystem::DebugPrint(file, line, message, noArgs);
+    LogSystem::DebugPrint(mFile, mLine, mVerbosity, message, noArgs);
 }
 
 
@@ -99,5 +114,5 @@ void Log::operator() (const char *message, ...) {
     va_list messageArgs;
     va_start(messageArgs, message);
 
-    LogSystem::DebugPrint(file, line, message, messageArgs);
+    LogSystem::DebugPrint(mFile, mLine, mVerbosity, message, messageArgs);
 }
