@@ -8,7 +8,7 @@
 #include <string>
 
 
-enum class Verbosity {
+enum class Verbosity : uint8_t{
 
     Off = 0,
     Error,
@@ -67,13 +67,11 @@ private:
     static void DebugPrint(const std::string &file, const int line, const Verbosity verbosity, const std::string &message, va_list messageArgs);
     static void WriteBufferToFile(const std::string &file, std::ostringstream &stream, const char *buffer);
 
-    static bool CheckVerbosity(Verbosity verbosity);
-
     // config variables
-    static const std::string sLogFileDir;
-    static const size_t sBytesToBuffer;
-    static const size_t sMaxMessageChars;
-    static const std::bitset<static_cast<int>(Verbosity::All) - 1> sVerbosityMask;
+    static std::string sLogFileDir;
+    static size_t sBytesToBuffer;
+    static size_t sMaxMessageChars;
+    static Verbosity sVerbosityLevel;
 
     static LogSystem* sInstance;
     

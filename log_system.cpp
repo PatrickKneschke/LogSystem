@@ -6,16 +6,17 @@
 #include <filesystem>
 #include <fstream>
 
+#include <unordered_map>
+
 
 /*    LOG SYSTEM    */
 
 LogSystem* LogSystem::sInstance = nullptr;
 
-const std::string LogSystem::sLogFileDir    = "Log/";
-const size_t LogSystem::sBytesToBuffer      = 4096;
-const size_t LogSystem::sMaxMessageChars    = 1023;
-
- const std::bitset<static_cast<int>(Verbosity::All) - 1> LogSystem::sVerbosityMask = static_cast<int>(Verbosity::Error) + static_cast<int>(Verbosity::Warning);
+std::string LogSystem::sLogFileDir    = "Log/";
+size_t LogSystem::sBytesToBuffer      = 2048;
+size_t LogSystem::sMaxMessageChars    = 256;
+Verbosity LogSystem::sVerbosityLevel  = Verbosity::All;
 
 
 void LogSystem::StartUp() {
@@ -25,11 +26,30 @@ void LogSystem::StartUp() {
         sInstance = new LogSystem();
     }
 
+    // process config file 
+    std::ifstream config("log.config");
+    std::unordered_map<std::string, std::string> configVar;
+    std::string line;
+    while (getline(config, line))
+    {
+        auto space = line.find(' ');
+        auto name = line.substr(0, space);
+        auto value = line.substr(space+1);
+
+        configVar[name] = value;
+    }
+    sLogFileDir = configVar["LOG_FILE_DIR"];
+    sBytesToBuffer = stoi(configVar["BYTES_TO_BUFFER"]);
+    sMaxMessageChars = stoi(configVar["MAX_MESSAGE_CHARS"]);
+    sVerbosityLevel = (Verbosity)stoi(configVar["VERBOSITY_LEVEL"]);
+
+    // create log file directory if not yet created
+    std::filesystem::create_directory(sLogFileDir);
+
+    // create time stamped log file for this session
     auto now = std::time(nullptr);
     char buffer[sizeof("YYYY-MM-DD_HH:MM:SS")];    
     sInstance->mLogFileName = std::string(buffer, buffer + std::strftime(buffer, sizeof(buffer),"%F_%T", std::gmtime(&now))) + ".log";
-
-    std::filesystem::create_directory(sLogFileDir);
 }
 
 
@@ -56,7 +76,7 @@ void LogSystem::DebugPrint(const std::string &file, const int line, const Verbos
 
     assert(sInstance != nullptr);
 
-    static char buffer[sMaxMessageChars];
+    char buffer[sMaxMessageChars];
 
     std::ostringstream stream;
     stream << file << " [" << line << "] , " << ToString(verbosity) << "\t : " << message << '\n';
@@ -67,8 +87,8 @@ void LogSystem::DebugPrint(const std::string &file, const int line, const Verbos
     WriteBufferToFile(sInstance->mLogFileName, sInstance->mLogFileStream, buffer);
 
     // also print message to default output if according to verbosity mask
-    if(CheckVerbosity(verbosity)) {
-
+    if (verbosity <= sVerbosityLevel)
+    {
         std::cout << buffer <<'\n';
     }
 }
@@ -91,12 +111,6 @@ void LogSystem::WriteBufferToFile(const std::string &fileName, std::ostringstrea
         stream.seekp(0);
     }
 }
-
-
- bool LogSystem::CheckVerbosity(Verbosity verbosity) {
-    
-    return sVerbosityMask.test(static_cast<int>(verbosity) - 1);
- }
 
 
 /*    LOG    */
