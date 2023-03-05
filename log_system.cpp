@@ -1,7 +1,6 @@
 
 #include "log_system.h"
 
-#include <assert.h>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -38,15 +37,15 @@ void LogSystem::StartUp() {
 
         configVar[name] = value;
     }
-    sLogFileDir = configVar["LOG_FILE_DIR"];
-    sBytesToBuffer = stoi(configVar["BYTES_TO_BUFFER"]);
+    sLogFileDir      = configVar["LOG_FILE_DIR"];
+    sBytesToBuffer   = stoi(configVar["BYTES_TO_BUFFER"]);
     sMaxMessageChars = stoi(configVar["MAX_MESSAGE_CHARS"]);
-    sVerbosityLevel = (Verbosity)stoi(configVar["VERBOSITY_LEVEL"]);
+    sVerbosityLevel  = (Verbosity)stoi(configVar["VERBOSITY_LEVEL"]);
 
     // create log file directory if not yet created
     std::filesystem::create_directory(sLogFileDir);
 
-    // create time stamped log file for this session
+    // time stamped log file name for this session
     auto now = std::time(nullptr);
     char buffer[sizeof("YYYY-MM-DD_HH:MM:SS")];    
     sInstance->mLogFileName = std::string(buffer, buffer + std::strftime(buffer, sizeof(buffer),"%F_%T", std::gmtime(&now))) + ".log";
@@ -72,15 +71,15 @@ void LogSystem::ShutDown() {
 }
 
 
-void LogSystem::DebugPrint(const std::string &file, const int line, const Verbosity verbosity, const std::string &message, va_list messageArgs) {
+void LogSystem::DebugPrint(const std::string &file, const int line, const Verbosity verbosity, const char *message, va_list messageArgs) {
 
     assert(sInstance != nullptr);
 
-    char buffer[sMaxMessageChars];
 
     std::ostringstream stream;
     stream << file << " [" << line << "] , " << ToString(verbosity) << "\t : " << message << '\n';
 
+    char buffer[sMaxMessageChars];
     int messageLength = vsnprintf(buffer, sMaxMessageChars, stream.str().c_str(), messageArgs);
     buffer[messageLength] = '\0';
 
@@ -119,7 +118,7 @@ void LogSystem::WriteBufferToFile(const std::string &fileName, std::ostringstrea
 void Log::operator() (const std::string &message) {
 
     va_list noArgs;
-    LogSystem::DebugPrint(mFile, mLine, mVerbosity, message, noArgs);
+    LogSystem::DebugPrint(mFile, mLine, mVerbosity, message.c_str(), noArgs);
 }
 
 
